@@ -1,40 +1,36 @@
 package org.example;
-import java.io.*;
-import java.util.*;
-import org.json.simple.*;
-import org.json.simple.parser.*;
+
+import java.io.FileReader;
+import java.util.HashMap;
+import java.util.Map;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 public class SpotifyStats {
 
-    private static HashMap<String, Object> statistics = new HashMap<>();
+    private static final Map<String, Object> statistics = new HashMap<>();
 
     public static void main(String[] args) {
         try {
-            // Step 1: Read Spotify history from files and combine them
             JSONArray combinedHistory = combineHistories(
-                    "D:\\Downloads\\my_spotify_data\\MyData\\StreamingHistory1.json",
-                    "D:\\Downloads\\my_spotify_data\\MyData\\StreamingHistory0.json");
-
-            // Step 2: Parse combined history and calculate statistics
+                    "d:\\Downloads\\my_spotify_data (1)\\Spotify Extended Streaming History\\Streaming_History_Audio_2021-2022_0.json",
+                    "d:\\Downloads\\my_spotify_data (1)\\Spotify Extended Streaming History\\Streaming_History_Audio_2022-2023_1.json",
+                    "d:\\Downloads\\my_spotify_data (1)\\Spotify Extended Streaming History\\Streaming_History_Audio_2023-2024_2.json",
+                    "d:\\Downloads\\my_spotify_data (1)\\Spotify Extended Streaming History\\Streaming_History_Audio_2024_3.json"
+            );
             parseHistory(combinedHistory);
-
-            // Step 3: Display statistics
             displayStatistics();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static JSONArray combineHistories(String filePath1, String filePath2) throws Exception {
-        // Read and parse history from the first file
-        JSONArray history1 = readHistory(filePath1);
-        // Read and parse history from the second file
-        JSONArray history2 = readHistory(filePath2);
-        // Combine both histories into a single list
+    private static JSONArray combineHistories(String... filePaths) throws Exception {
         JSONArray combinedHistory = new JSONArray();
-        combinedHistory.addAll(history1);
-        combinedHistory.addAll(history2);
+        for (String filePath : filePaths) {
+            combinedHistory.addAll(readHistory(filePath));
+        }
         return combinedHistory;
     }
 
@@ -46,33 +42,32 @@ public class SpotifyStats {
 
     private static void parseHistory(JSONArray history) {
         int totalSongs = 0;
-        HashMap<String, Integer> artistCounts = new HashMap<>();
-        HashMap<String, Integer> songCounts = new HashMap<>();
+        Map<String, Integer> artistCounts = new HashMap<>();
+        Map<String, Integer> songCounts = new HashMap<>();
 
-        // Iterate through each entry in the history
         for (Object entry : history) {
             JSONObject item = (JSONObject) entry;
-            String songName = (String) item.get("trackName");
-            String artistName = (String) item.get("artistName");
 
-            // Increment total song count
+            String songName = (String) item.get("master_metadata_track_name");
+            String artistName = (String) item.get("master_metadata_album_artist_name");
+
+            if (songName == null || artistName == null) {
+                continue;
+            }
+
             totalSongs++;
 
-            // Update artist counts
             artistCounts.put(artistName, artistCounts.getOrDefault(artistName, 0) + 1);
 
-            // Update song counts
             String songKey = songName + " - " + artistName;
             songCounts.put(songKey, songCounts.getOrDefault(songKey, 0) + 1);
         }
 
-        // Store statistics
         statistics.put("totalSongs", totalSongs);
         statistics.put("artistCounts", artistCounts);
         statistics.put("songCounts", songCounts);
     }
 
-    // Method to display statistics
     private static void displayStatistics() {
         System.out.println("Statistics:");
         System.out.println("Total songs listened: " + statistics.get("totalSongs"));
@@ -80,20 +75,18 @@ public class SpotifyStats {
         displayTopFiftySongs();
     }
 
-    // Method to display top fifty artists
     private static void displayTopFiftyArtists() {
         System.out.println("\nTop Fifty Artists:");
-        HashMap<String, Integer> artistCounts = (HashMap<String, Integer>) statistics.get("artistCounts");
+        Map<String, Integer> artistCounts = (Map<String, Integer>) statistics.get("artistCounts");
         artistCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(50)
                 .forEach(entry -> System.out.printf("%-30s %d\n", entry.getKey(), entry.getValue()));
     }
 
-    // Method to display top fifty songs
     private static void displayTopFiftySongs() {
         System.out.println("\nTop Fifty Songs:");
-        HashMap<String, Integer> songCounts = (HashMap<String, Integer>) statistics.get("songCounts");
+        Map<String, Integer> songCounts = (Map<String, Integer>) statistics.get("songCounts");
         songCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(50)
